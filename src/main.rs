@@ -162,10 +162,10 @@ async fn main() -> std::result::Result<(), Error> {
     let tcp = TcpListener::bind((Ipv4Addr::from([127, 0, 0, 1]), params.local_port)).await?;
 
     println!("listening for new connections");
-    loop {
-        tokio::select!(
-            _ = async {
-                // listen for new connections
+    tokio::select!(
+        _ = async {
+            // listen for new connections
+            loop {
                 let connect = tcp.accept().await;
                 if let Ok((socket, _addr)) = connect {
                     println!("new connection with addr {:?}", _addr);
@@ -177,16 +177,18 @@ async fn main() -> std::result::Result<(), Error> {
                             copy(socket, url).await.unwrap_or(());
                         }
                     });
+                } else {
+                    break;
                 };
-                Ok::<(), Error>(())
-            }=>{},
-            // delete created session auth tokens
-            _ = signal::ctrl_c()=>{
-                handler.delete().await?;
-                break;
             }
-        );
-    }
+            Ok::<(), Error>(())
+        }=>{},
+        // delete created session auth tokens
+        _ = signal::ctrl_c()=>{
+            println!("closing connections and deleting sessions");
+            handler.delete().await?;
+        }
+    );
     Ok(())
 }
 
