@@ -1,0 +1,24 @@
+name: commit-artifact
+
+on: [push]
+
+jobs:
+  upload-to-azure-blob:
+    runs-on: ubuntu-latest
+    name: uploads to azure blob storage container
+    steps:
+      - uses: actions/checkout@v3
+      - id : test-data
+        run : |
+          touch haha.text
+          echo haha > haha.text
+      - id: upload-blob
+        uses: cedric05/upload-to-azure-blob-storage@main
+        with:
+            source-file: haha.text
+            base-project-path: haha # az backup directory
+            target-file: haha.erere # az target file name
+            overwrite: 'true'
+            container-name: github-artifacts
+            storage-account-name: cedric05artifacts 
+            creds: ${{ secrets.AZURE_CREDENTIALS }}

@@ -2,9 +2,9 @@ name: commit-artifact
 
 on:
   push:
-    branches: [ master, 'dev-*' ]
+    # branches: [ master, 'dev-*' ]
   pull_request:
-    branches: [ main ]
+    # branches: [ main ]
 
 
 jobs:
