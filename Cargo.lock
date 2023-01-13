@@ -62,6 +62,7 @@ dependencies = [
  "azure_core",
  "azure_identity",
  "azure_mgmt_network",
+ "cfg-if",
  "clap",
  "futures",
  "reqwest",

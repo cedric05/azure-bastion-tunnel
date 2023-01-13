@@ -2,6 +2,7 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 
 use azure_identity::AzureCliCredential;
+use cfg_if::cfg_if;
 use clap::Parser;
 use futures::{SinkExt, StreamExt};
 
@@ -161,10 +162,31 @@ async fn main() -> std::result::Result<(), Error> {
     // bind socket
     let tcp = TcpListener::bind((Ipv4Addr::from([127, 0, 0, 1]), params.local_port)).await?;
 
-    println!("listening for new connections");
+    cfg_if! {
+        if #[cfg(unix)] {
+            let mut term_sig = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+            let fut = tokio::spawn(async move {
+                tokio::select! {
+                    _ = term_sig.recv()=>{
+                    },
+                    _ = signal::ctrl_c() => {
+                    }
+                }
+            });
+        } else {
+            let fut = tokio::spawn(async move {
+                tokio::select! {
+                    _ = signal::ctrl_c() => {
+                    }
+                }
+            });
+        }
+    };
+
     tokio::select!(
         _ = async {
             // listen for new connections
+            println!("listening for new connections");
             loop {
                 let connect = tcp.accept().await;
                 if let Ok((socket, _addr)) = connect {
@@ -184,7 +206,7 @@ async fn main() -> std::result::Result<(), Error> {
             Ok::<(), Error>(())
         }=>{},
         // delete created session auth tokens
-        _ = signal::ctrl_c()=>{
+        _ = fut=>{
             println!("closing connections and deleting sessions");
             handler.delete().await?;
         }
