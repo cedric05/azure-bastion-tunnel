@@ -1,0 +1,38 @@
+name: commit-artifact
+
+on:
+  push:
+    branches: [ master, 'dev-*' ]
+  pull_request:
+    branches: [ main ]
+
+
+jobs:
+  build_and_test:
+    name: Upload to Blob Storage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: upload
+        run:  az storage blob upload --overwrite --name azure-bastion-tunnel-master/azure-bastion-tunnel-${{ steps.date.outputs.date }} --file target/release/azure-bastion-tunnel --container-name github-artifacts --account-name cedric05artifacts  --auth-mode login
+
