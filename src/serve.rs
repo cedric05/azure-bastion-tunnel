@@ -9,7 +9,9 @@ use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWrite;
 use tokio::net::TcpListener;
 use tokio::net::TcpStream;
+#[cfg(unix)]
 use tokio::net::UnixListener;
+#[cfg(unix)]
 use tokio::net::UnixStream;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
@@ -17,7 +19,23 @@ use url::Url;
 
 pub enum Listener {
     Tcp(TcpListener),
-    Unix(UnixListener),
+    #[cfg(unix)]
+    Unix {
+        listener: UnixListener,
+        path: String,
+    },
+}
+
+impl Drop for Listener {
+    fn drop(&mut self) {
+        match self {
+            Listener::Tcp(_) => todo!(),
+            #[cfg(unix)]
+            Listener::Unix { path, .. } => {
+                std::fs::remove_file(path).unwrap();
+            }
+        }
+    }
 }
 
 impl Listener {
@@ -27,9 +45,10 @@ impl Listener {
                 let listener = TcpListener::bind((Ipv4Addr::from([127, 0, 0, 1]), port)).await?;
                 Listener::Tcp(listener)
             }
+            #[cfg(unix)]
             Local::Unix(path) => {
-                let listener = UnixListener::bind(path)?;
-                Listener::Unix(listener)
+                let listener = UnixListener::bind(path.as_str())?;
+                Listener::Unix { listener, path }
             }
         })
     }
@@ -41,7 +60,8 @@ impl Listener {
                 println!("new connection with addr {:?}", _addr);
                 Ok(RemoteConnection::Tcp(socket))
             }
-            Listener::Unix(listener) => {
+            #[cfg(unix)]
+            Listener::Unix { listener, .. } => {
                 let (socket, _addr) = listener.accept().await?;
                 Ok(RemoteConnection::Unix(socket))
             }
@@ -51,6 +71,7 @@ impl Listener {
 
 pub(crate) enum RemoteConnection {
     Tcp(TcpStream),
+    #[cfg(unix)]
     Unix(UnixStream),
 }
 
@@ -58,6 +79,7 @@ impl RemoteConnection {
     pub(crate) async fn copy(self, url: Url) -> std::result::Result<(), Error> {
         match self {
             RemoteConnection::Tcp(tcp_stream) => copy(tcp_stream, url).await,
+            #[cfg(unix)]
             RemoteConnection::Unix(unix_stream) => copy(unix_stream, url).await,
         }
     }

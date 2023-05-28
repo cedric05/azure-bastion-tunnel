@@ -32,6 +32,7 @@ pub(crate) struct Cli {
 
 #[derive(Debug, Clone)]
 pub(crate) enum Local {
+    #[cfg(unix)]
     Unix(String),
     Port(u16),
 }
@@ -39,7 +40,11 @@ pub(crate) enum Local {
 impl From<String> for Local {
     fn from(value: String) -> Self {
         if value.starts_with('/') {
-            Self::Unix(value)
+            #[cfg(unix)]
+            if cfg!(unix) {
+                return Self::Unix(value);
+            }
+            panic!("unix sockets are not supported on this platform")
         } else {
             Self::Port(value.parse().expect("expect port to be a number"))
         }

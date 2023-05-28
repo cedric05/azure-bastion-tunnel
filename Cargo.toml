@@ -1,6 +1,6 @@
 [package]
 name = "azure-bastion-tunnel"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Shiva Prasanth <kesavarapu.siva@gmail.com>"]
 description = "azure-bastion-tunnel creates local proxy to machines in Azure Virtual Network"
