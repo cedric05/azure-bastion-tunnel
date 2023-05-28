@@ -1,4 +1,4 @@
-use clap::{Parser};
+use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -25,6 +25,23 @@ pub(crate) struct Cli {
     #[arg(long, default_value_t = 22)]
     pub(crate) remote_port: u16,
 
-    #[arg(short, long, default_value_t = 2222)]
-    pub(crate) local_port: u16,
+    /// Unix socket or port
+    #[arg(short, long)]
+    pub(crate) local: Local,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum Local {
+    Unix(String),
+    Port(u16),
+}
+
+impl From<String> for Local {
+    fn from(value: String) -> Self {
+        if value.starts_with('/') {
+            Self::Unix(value)
+        } else {
+            Self::Port(value.parse().expect("expect port to be a number"))
+        }
+    }
 }
