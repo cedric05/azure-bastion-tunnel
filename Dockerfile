@@ -1,5 +1,4 @@
-FROM rust:alpine
-RUN apk add openssl pkgconfig musl-dev openssl-dev
+FROM rust
 ADD . /app/
 WORKDIR /app/
 RUN cargo build --release
