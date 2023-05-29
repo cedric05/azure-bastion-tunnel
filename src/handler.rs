@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use crate::Error;
 
+use azure_core::auth::TokenCredential;
+use azure_identity::AutoRefreshingTokenCredential;
 use reqwest::header::HeaderMap;
 use reqwest::Client;
 use reqwest::StatusCode;
@@ -24,7 +28,7 @@ struct BastionAuthTokenResponse {
 /// Handler for getting new auth tokens
 pub struct AzTokenHandler {
     /// currently it uses AzCliTokenCredentials only
-    pub(crate) credential: Box<dyn azure_core::auth::TokenCredential>,
+    pub(crate) credential: Arc<AutoRefreshingTokenCredential>,
     pub(crate) client: Client,
     pub(crate) last_token: Option<String>,
     pub(crate) node_id: Option<String>,

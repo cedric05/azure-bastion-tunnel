@@ -20,13 +20,17 @@ async fn main() -> std::result::Result<(), Error> {
     // bind socket
     let listener = serve::Listener::bind(params.local).await?;
     // get subscription from terminal or use default subscription
+    // get bastion address
+    let credential = Arc::new(AutoRefreshingTokenCredential::new(Arc::new(
+        AzureCliCredential::default(),
+    )));
+
     let subscription_id = params
         .subscription_id
         .unwrap_or(AzureCliCredential::get_subscription()?);
-    // get bastion address
+
     let bastion = {
-        let client =
-            azure_mgmt_network::Client::builder(Arc::new(AzureCliCredential::default())).build();
+        let client = azure_mgmt_network::Client::builder(credential.clone()).build();
         let bastion = client
             .bastion_hosts_client()
             .get(
@@ -44,8 +48,6 @@ async fn main() -> std::result::Result<(), Error> {
             .expect("expect dns name attached to bastion")
     };
 
-    let credential = AutoRefreshingTokenCredential::new(Arc::new(AzureCliCredential::default()));
-
     let mut handler = handler::AzTokenHandler {
         resource_id: format!(
             "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Compute/virtualMachines/{}",
@@ -57,7 +59,7 @@ async fn main() -> std::result::Result<(), Error> {
         last_token: None,
         node_id: None,
         client: Default::default(),
-        credential: Box::new(credential),
+        credential: credential,
     };
 
     cfg_if! {
