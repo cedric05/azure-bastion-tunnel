@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use azure_identity::AzureCliCredential;
+use azure_identity::{AutoRefreshingTokenCredential, AzureCliCredential};
 use cfg_if::cfg_if;
 use clap::Parser;
 
@@ -17,6 +17,8 @@ pub type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 async fn main() -> std::result::Result<(), Error> {
     let params = cli::Cli::parse();
 
+    // bind socket
+    let listener = serve::Listener::bind(params.local).await?;
     // get subscription from terminal or use default subscription
     let subscription_id = params
         .subscription_id
@@ -42,7 +44,8 @@ async fn main() -> std::result::Result<(), Error> {
             .expect("expect dns name attached to bastion")
     };
 
-    let credential = AzureCliCredential::default();
+    let credential = AutoRefreshingTokenCredential::new(Arc::new(AzureCliCredential::default()));
+
     let mut handler = handler::AzTokenHandler {
         resource_id: format!(
             "/subscriptions/{}/resourceGroups/{}/providers/Microsoft.Compute/virtualMachines/{}",
@@ -56,10 +59,6 @@ async fn main() -> std::result::Result<(), Error> {
         client: Default::default(),
         credential: Box::new(credential),
     };
-
-    // bind socket
-
-    let listener = serve::Listener::bind(params.local).await?;
 
     cfg_if! {
         if #[cfg(unix)] {
