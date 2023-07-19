@@ -29,7 +29,7 @@ pub enum Listener {
 impl Drop for Listener {
     fn drop(&mut self) {
         match self {
-            Listener::Tcp(_) => todo!(),
+            Listener::Tcp(_) => {},
             #[cfg(unix)]
             Listener::Unix { path, .. } => {
                 std::fs::remove_file(path).unwrap();
